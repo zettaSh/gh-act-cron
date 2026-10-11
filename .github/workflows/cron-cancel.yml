@@ -1,19 +1,52 @@
-# .github/workflows/cron-cancel-test.yml
-
-# update
-
+# rev: 0
 name: cron-cancel-test
 on:
   schedule:
     - cron: '7 */3 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   sleep:
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    env:
+      PUSH_PAT: ${{ secrets.PUSH_PAT }}
+      REPO_URL: github.com/${{ github.repository }}.git
     steps:
-      - run: echo "event=${{ github.event_name }} ref=${{ github.ref }} sha=${{ github.sha }}"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - run: |
-          for i in $(seq 1 60); do
+          echo "event=${{ github.event_name }} ref=${{ github.ref }} sha=${{ github.sha }}"
+          git config user.name cron-cancel-test
+          git config user.email cron-cancel-test@users.noreply.github.com
+      - name: push via GITHUB_TOKEN
+        run: |
+          sleep 60
+          echo "${{ github.run_id }} token $(date -u +%T)" >> push-log.txt
+          git add push-log.txt
+          git commit -m "token push from run ${{ github.run_id }}"
+          git push "https://x-access-token:${{ github.token }}@$REPO_URL" HEAD:main
+          echo "$(date -u +%T) pushed via GITHUB_TOKEN"
+      - name: push via PAT
+        if: env.PUSH_PAT != ''
+        run: |
+          sleep 360
+          echo "${{ github.run_id }} pat $(date -u +%T)" >> push-log.txt
+          git commit -am "pat push from run ${{ github.run_id }}"
+          git push "https://${{ github.repository_owner }}:$PUSH_PAT@$REPO_URL" HEAD:main
+          echo "$(date -u +%T) pushed via PAT"
+      - name: push workflow change via PAT
+        if: env.PUSH_PAT != ''
+        run: |
+          sleep 360
+          sed -i "1s/.*/# rev: ${{ github.run_id }}/" .github/workflows/cron-cancel.yml
+          git commit -am "workflow change from run ${{ github.run_id }}"
+          git push "https://${{ github.repository_owner }}:$PUSH_PAT@$REPO_URL" HEAD:main
+          echo "$(date -u +%T) pushed workflow change via PAT"
+      - run: |
+          for i in $(seq 1 30); do
             echo "$(date -u +%T) tick $i"
             sleep 30
           done
