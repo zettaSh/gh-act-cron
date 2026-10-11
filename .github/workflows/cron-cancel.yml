@@ -1,0 +1,18 @@
+# .github/workflows/cron-cancel-test.yml
+name: cron-cancel-test
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+jobs:
+  sleep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - run: echo "event=${{ github.event_name }} ref=${{ github.ref }} sha=${{ github.sha }}"
+      - run: |
+          for i in $(seq 1 60); do
+            echo "$(date -u +%T) tick $i"
+            sleep 30
+          done
+      - if: cancelled()
+        run: echo "$(date -u +%T) cancelled"
