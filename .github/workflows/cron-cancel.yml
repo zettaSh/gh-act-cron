@@ -4,9 +4,8 @@
 
 name: cron-cancel-test
 on:
-  workflow_dispatch: 
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/10 * * * *'
 jobs:
   sleep:
     runs-on: ubuntu-latest
