@@ -4,6 +4,7 @@
 
 name: cron-cancel-test
 on:
+  workflow_dispatch: 
   schedule:
     - cron: '*/5 * * * *'
 jobs:
